@@ -35,6 +35,7 @@ type Upgrader struct {
 	// pathComplete.
 	pathComplete string
 	pathPartial  string
+	pathPersist  string
 
 	lk    sync.Mutex
 	path  string // guarded by lk
@@ -62,6 +63,7 @@ func Upgrade(underlying Mount, throttler throttle.Throttler, rootdir, key string
 		throttler:    throttler,
 		pathComplete: filepath.Join(rootdir, "transient-"+key+".complete"),
 		pathPartial:  filepath.Join(rootdir, "transient-"+key+".partial"),
+		pathPersist:  "",
 	}
 	if ret.rootdir == "" {
 		ret.rootdir = os.TempDir() // use the OS' default temp dir.
@@ -148,6 +150,22 @@ func (u *Upgrader) Fetch(ctx context.Context) (Reader, error) {
 			log.Warnw("failed to rename partial transient", "shard", u.key, "from_path", u.pathPartial, "to_path", u.pathComplete, "error", err)
 		}
 
+		if info := u.underlying.Info(); info.Kind == KindRemote {
+			u.pathPersist = filepath.Join(u.rootdir, "remote/"+u.key)
+			persistFile, err := os.Create(u.pathPersist)
+			if err != nil {
+				log.Warnf("create %s failed: %v", u.pathPersist, err)
+			} else {
+				srcFile, err := os.Open(u.pathComplete)
+				if err == nil {
+					_, err = io.Copy(persistFile, srcFile)
+					_ = srcFile.Close()
+					log.Debugf("create persist file: copy %s to %s, error: %v", u.pathComplete, u.pathPersist, err)
+				}
+				_ = persistFile.Close()
+			}
+		}
+
 		u.lk.Lock()
 		u.path = u.pathComplete
 		u.ready = true
@@ -196,6 +214,14 @@ func (u *Upgrader) TransientPath() string {
 	defer u.lk.Unlock()
 
 	return u.path
+}
+
+// PersistPath returns the local path of the persist file, if one exists.
+func (u *Upgrader) PersistPath() string {
+	u.lk.Lock()
+	defer u.lk.Unlock()
+
+	return u.pathPersist
 }
 
 // TimesFetched returns the number of times that the underlying has

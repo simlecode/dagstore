@@ -17,6 +17,7 @@ type PersistedShard struct {
 	Key           string     `json:"k"`
 	URL           string     `json:"u"`
 	TransientPath string     `json:"t"`
+	PersistPath    string     `json:"p"`
 	State         ShardState `json:"s"`
 	Lazy          bool       `json:"l"`
 	Error         string     `json:"e"`
@@ -36,6 +37,7 @@ func (s *Shard) MarshalJSON() ([]byte, error) {
 		State:         s.state,
 		Lazy:          s.lazy,
 		TransientPath: s.mount.TransientPath(),
+		PersistPath:    s.mount.PersistPath(),
 	}
 	if s.err != nil {
 		ps.Error = s.err.Error()
@@ -73,6 +75,7 @@ func (s *Shard) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to instantiate mount from URL: %w", err)
 	}
+
 	s.mount, err = mount.Upgrade(mnt, s.d.throttleReaadyFetch, s.d.config.TransientsDir, s.key.String(), ps.TransientPath)
 	if err != nil {
 		return fmt.Errorf("failed to apply mount upgrader: %w", err)

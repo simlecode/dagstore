@@ -12,7 +12,6 @@ import (
 	carindex "github.com/ipld/go-car/v2/index"
 
 	ds "github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/namespace"
 	"github.com/ipfs/go-datastore/query"
 	dssync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log/v2"
@@ -215,7 +214,7 @@ func NewDAGStore(cfg Config) (*DAGStore, error) {
 	}
 
 	// namespace all store operations.
-	cfg.Datastore = namespace.Wrap(cfg.Datastore, StoreNamespace)
+	//cfg.Datastore = namespace.Wrap(cfg.Datastore, StoreNamespace)
 
 	if cfg.MountRegistry == nil {
 		cfg.MountRegistry = mount.NewRegistry()
